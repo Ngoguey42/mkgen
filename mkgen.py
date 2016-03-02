@@ -6,11 +6,12 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/02 17:00:49 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/02 17:57:57 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os
+from include_explorer import Explorer
 import re
 import subprocess
 
@@ -43,20 +44,7 @@ def srcstargets_of_output(s):
 		return None
 	return [(x[0], x[1].split(' ')) for x in grps];
 
-def includes_of_fpath(fpath):
-	buf = None
-	with open(fpath, "r") as stream:
-		buf = stream.read()
-	if buf == None:
-		print("\033[33mWarning: Could not read file %s\033[0m" % fpath)
-		return []
-	grps = re.findall(PATTERNSRCBODY, buf, re.MULTILINE)
-	if grps == None:
-		return []
-	return grps
-
-
-def sourcefiles_of_directory(dirname):
+def sourcefiles_of_directory(dirname, explorer):
 	files_found = []
 	print("reding dir: " + directory)
 	if not os.path.isdir(dirname):
@@ -66,13 +54,12 @@ def sourcefiles_of_directory(dirname):
 		for file in files:
 			grps = re.search(PATTERNSRC, file)
 			if grps != None:
-				incs = includes_of_fpath("%s/%s" %(root, file))
+				incs = explorer.dep_set_of_sourcefile("%s/%s" %(root, file))
 				files_found.append((root, grps.group(1), grps.group(2), incs))
 	if len(files_found) == 0:
 		print("\033[33mWarning: No sources found in %s\033[0m" % dirname)
 		return []
 	return files_found;
-
 
 if __name__ == "__main__":
 	if not os.path.isfile("Makefile"):
@@ -93,11 +80,14 @@ if __name__ == "__main__":
 		exit()
 	print(srcstargets) #debug
 	sourcefiles_per_trgtdir = dict()
+	inc_explorer = Explorer(includes)
+	# include_files = dict()
 	for trgt in srcstargets:
 		for directory in trgt[1]:
 			if directory not in sourcefiles_per_trgtdir:
-				sourcefiles = sourcefiles_of_directory(directory)
+				sourcefiles = sourcefiles_of_directory(directory, inc_explorer)
 				if sourcefiles == None:
 					exit()
 				sourcefiles_per_trgtdir[directory] = sourcefiles;
+
 	print(sourcefiles_per_trgtdir) #debug

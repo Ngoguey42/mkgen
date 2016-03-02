@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/02 16:27:39 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/02 17:00:49 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,6 +20,7 @@ PATTERNINC = r"^MKGEN_INCLUDESDIRS .\= (.*)$"
 PATTERNOBJDIR = r"^MKGEN_OBJDIR .\= ([^\s]*)$"
 PATTERNSRCS = r"^MKGEN_SRCSDIRS_([^\s]*) .\= (.*)$"
 PATTERNSRC = r"^(.*)\.(c|cpp)$"
+PATTERNSRCBODY = r"^\s*\#\s*include\s*\"(.*)\""
 
 def includes_list_of_output(s):
 	grps = re.search(PATTERNINC, s, re.MULTILINE)
@@ -42,6 +43,19 @@ def srcstargets_of_output(s):
 		return None
 	return [(x[0], x[1].split(' ')) for x in grps];
 
+def includes_of_fpath(fpath):
+	buf = None
+	with open(fpath, "r") as stream:
+		buf = stream.read()
+	if buf == None:
+		print("\033[33mWarning: Could not read file %s\033[0m" % fpath)
+		return []
+	grps = re.findall(PATTERNSRCBODY, buf, re.MULTILINE)
+	if grps == None:
+		return []
+	return grps
+
+
 def sourcefiles_of_directory(dirname):
 	files_found = []
 	print("reding dir: " + directory)
@@ -52,7 +66,8 @@ def sourcefiles_of_directory(dirname):
 		for file in files:
 			grps = re.search(PATTERNSRC, file)
 			if grps != None:
-				files_found.append((root, grps.group(1), grps.group(2), []))
+				incs = includes_of_fpath("%s/%s" %(root, file))
+				files_found.append((root, grps.group(1), grps.group(2), incs))
 	if len(files_found) == 0:
 		print("\033[33mWarning: No sources found in %s\033[0m" % dirname)
 		return []
@@ -85,5 +100,4 @@ if __name__ == "__main__":
 				if sourcefiles == None:
 					exit()
 				sourcefiles_per_trgtdir[directory] = sourcefiles;
-	print(sourcefiles_per_trgtdir)
-	print('Hello')
+	print(sourcefiles_per_trgtdir) #debug

@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/02 18:29:26 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/02 18:30:01 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -107,6 +107,6 @@ if __name__ == "__main__":
 				if sourcefiles == None:
 					exit()
 				sourcefiles_per_trgtdir[directory] = sourcefiles;
-	with open("hello.mk", "w") as stream:
+	with open("depend.mk", "w") as stream:
 		write_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir)
 	# print(sourcefiles_per_trgtdir) #debug

@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/02 16:21:13 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/02 16:27:39 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,42 +24,44 @@ PATTERNSRC = r"^(.*)\.(c|cpp)$"
 def includes_list_of_output(s):
 	grps = re.search(PATTERNINC, s, re.MULTILINE)
 	if grps == None:
-		print("\033[31mCould not find variable MKGEN_INCLUDESDIRS\033[0m")
+		print("\033[31mError: Could not find variable MKGEN_INCLUDESDIRS\033[0m")
 		return None
 	return grps.group(1).split(' ')
 
 def objdir_of_output(s):
 	grps = re.search(PATTERNOBJDIR, s, re.MULTILINE)
 	if grps == None:
-		print("\033[31mCould not find variable MKGEN_OBJDIR\033[0m")
+		print("\033[31mError: Could not find variable MKGEN_OBJDIR\033[0m")
 		return None
 	return grps.group(1)
 
 def srcstargets_of_output(s):
 	grps = re.findall(PATTERNSRCS, s, re.MULTILINE)
 	if grps == None:
-		print("\033[31mCould not find any variable PATTERN MKGEN_SRCSDIRS_*\033[0m")
+		print("\033[31mError: Could not find any variable PATTERN MKGEN_SRCSDIRS_*\033[0m")
 		return None
 	return [(x[0], x[1].split(' ')) for x in grps];
 
 def sourcefiles_of_directory(dirname):
 	files_found = []
 	print("reding dir: " + directory)
+	if not os.path.isdir(dirname):
+		print("\033[33mWarning: No such directory %s\033[0m" % dirname)
+		return []
 	for root, dirs, files in os.walk(dirname):
-		# print('hel', root, dirs, files)
 		for file in files:
 			grps = re.search(PATTERNSRC, file)
-			fpath = "%s/%s" %(root, file)
 			if grps != None:
-				files_found.append((root, grps.group(1), grps.group(2)))
-			# print(fpath, grps)
-
+				files_found.append((root, grps.group(1), grps.group(2), []))
+	if len(files_found) == 0:
+		print("\033[33mWarning: No sources found in %s\033[0m" % dirname)
+		return []
 	return files_found;
 
 
 if __name__ == "__main__":
 	if not os.path.isfile("Makefile"):
-		print(("\033[31m%s/Makefile missing\033[0m") %(os.getcwd()))
+		print(("\033[31mError: %s/Makefile missing\033[0m") %(os.getcwd()))
 		exit()
 	ret = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE).stdout.read()
 	print(ret.decode("utf-8"))

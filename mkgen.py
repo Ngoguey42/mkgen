@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/02 16:06:41 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/02 16:21:13 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -19,6 +19,7 @@ CMD = 'make -pn nosuchrule 2>/dev/null | grep -A1 "^# makefile"| grep -v "^#\|^-
 PATTERNINC = r"^MKGEN_INCLUDESDIRS .\= (.*)$"
 PATTERNOBJDIR = r"^MKGEN_OBJDIR .\= ([^\s]*)$"
 PATTERNSRCS = r"^MKGEN_SRCSDIRS_([^\s]*) .\= (.*)$"
+PATTERNSRC = r"^(.*)\.(c|cpp)$"
 
 def includes_list_of_output(s):
 	grps = re.search(PATTERNINC, s, re.MULTILINE)
@@ -41,6 +42,21 @@ def srcstargets_of_output(s):
 		return None
 	return [(x[0], x[1].split(' ')) for x in grps];
 
+def sourcefiles_of_directory(dirname):
+	files_found = []
+	print("reding dir: " + directory)
+	for root, dirs, files in os.walk(dirname):
+		# print('hel', root, dirs, files)
+		for file in files:
+			grps = re.search(PATTERNSRC, file)
+			fpath = "%s/%s" %(root, file)
+			if grps != None:
+				files_found.append((root, grps.group(1), grps.group(2)))
+			# print(fpath, grps)
+
+	return files_found;
+
+
 if __name__ == "__main__":
 	if not os.path.isfile("Makefile"):
 		print(("\033[31m%s/Makefile missing\033[0m") %(os.getcwd()))
@@ -50,12 +66,22 @@ if __name__ == "__main__":
 	includes = includes_list_of_output(ret.decode("utf-8"))
 	if includes == None:
 		exit()
-	print(includes)
+	print(includes) #debug
 	objdir = objdir_of_output(ret.decode("utf-8"))
 	if objdir == None:
 		exit()
-	print(objdir)
+	print(objdir) #debug
 	srcstargets = srcstargets_of_output(ret.decode("utf-8"))
 	if srcstargets == None:
 		exit()
-	print(srcstargets)
+	print(srcstargets) #debug
+	sourcefiles_per_trgtdir = dict()
+	for trgt in srcstargets:
+		for directory in trgt[1]:
+			if directory not in sourcefiles_per_trgtdir:
+				sourcefiles = sourcefiles_of_directory(directory)
+				if sourcefiles == None:
+					exit()
+				sourcefiles_per_trgtdir[directory] = sourcefiles;
+	print(sourcefiles_per_trgtdir)
+	print('Hello')

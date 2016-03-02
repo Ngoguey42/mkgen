@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/02 17:57:57 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/02 18:22:03 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -61,12 +61,31 @@ def sourcefiles_of_directory(dirname, explorer):
 		return []
 	return files_found;
 
+def write_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir):
+	for srcstarget in srcstargets:
+		stream.write("MKGEN_SRCSBIN_%s :=" % srcstarget[0].upper())
+		for directory in srcstarget[1]:
+			files = sourcefiles_per_trgtdir[directory]
+			i = 0
+			for f in files:
+				stream.write("\\\n")
+				stream.write("\t%s/%s/%s.o" % (objdir, f[0], f[1]))
+		stream.write("\n")
+	for _, srcdir in sourcefiles_per_trgtdir.items():
+		# print(srcdir, '\n')
+		for f in srcdir:
+			stream.write("%s/%s/%s.o: " % (objdir, f[0], f[1]))
+			for dep in f[3]:
+				 stream.write("%s " % dep)
+			stream.write("| %s/%s/\n" % (objdir, f[0]))
+
+
 if __name__ == "__main__":
 	if not os.path.isfile("Makefile"):
 		print(("\033[31mError: %s/Makefile missing\033[0m") %(os.getcwd()))
 		exit()
 	ret = subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE).stdout.read()
-	print(ret.decode("utf-8"))
+	# print(ret.decode("utf-8"))
 	includes = includes_list_of_output(ret.decode("utf-8"))
 	if includes == None:
 		exit()
@@ -81,7 +100,6 @@ if __name__ == "__main__":
 	print(srcstargets) #debug
 	sourcefiles_per_trgtdir = dict()
 	inc_explorer = Explorer(includes)
-	# include_files = dict()
 	for trgt in srcstargets:
 		for directory in trgt[1]:
 			if directory not in sourcefiles_per_trgtdir:
@@ -89,5 +107,6 @@ if __name__ == "__main__":
 				if sourcefiles == None:
 					exit()
 				sourcefiles_per_trgtdir[directory] = sourcefiles;
-
+	with open("hello.mk", "w") as stream:
+		write_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir)
 	print(sourcefiles_per_trgtdir) #debug

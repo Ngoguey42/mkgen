@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/02 18:30:01 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/12 18:32:20 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -62,20 +62,19 @@ def sourcefiles_of_directory(dirname, explorer):
 	return files_found;
 
 def write_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir):
-	for srcstarget in srcstargets:
+	for srcstarget in sorted(srcstargets, key=lambda f: f[0].upper()): #Iter through all MKGEN_SRCSDIRS_*
 		stream.write("MKGEN_SRCSBIN_%s :=" % srcstarget[0].upper())
-		for directory in srcstarget[1]:
+		for directory in sorted(srcstarget[1]): #Iter through all dirs
 			files = sourcefiles_per_trgtdir[directory]
 			i = 0
-			for f in files:
+			for f in sorted(files): #Iter through all files
 				stream.write("\\\n")
 				stream.write("\t%s/%s/%s.o" % (objdir, f[0], f[1]))
 		stream.write("\n")
-	for _, srcdir in sourcefiles_per_trgtdir.items():
-		# print(srcdir, '\n')
-		for f in srcdir:
-			stream.write("%s/%s/%s.o: " % (objdir, f[0], f[1]))
-			for dep in f[3]:
+	for _, srcdir in sorted(sourcefiles_per_trgtdir.items()): #Iter through all unique dirs in MKGEN_SRCSDIRS_*
+		for f in sorted(srcdir):
+			stream.write("%s/%s/%s.o: " % (objdir, f[0], f[1])) #Iter through all source files
+			for dep in sorted(f[3]): #Iter through all dependency
 				 stream.write("%s " % dep)
 			stream.write("| %s/%s/\n" % (objdir, f[0]))
 

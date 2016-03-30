@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/03/02 15:19:56 by ngoguey           #+#    #+#              #
-#    Updated: 2016/03/12 18:32:20 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/03/30 09:28:29 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,7 +20,7 @@ CMD = 'make -pn nosuchrule 2>/dev/null | grep -A1 "^# makefile"| grep -v "^#\|^-
 PATTERNINC = r"^MKGEN_INCLUDESDIRS .\= (.*)$"
 PATTERNOBJDIR = r"^MKGEN_OBJDIR .\= ([^\s]*)$"
 PATTERNSRCS = r"^MKGEN_SRCSDIRS_([^\s]*) .\= (.*)$"
-PATTERNSRC = r"^(.*)\.(c|cpp)$"
+PATTERNSRC = r"^(.*)\.(c|cpp|cc)$"
 PATTERNSRCBODY = r"^\s*\#\s*include\s*\"(.*)\""
 
 def includes_list_of_output(s):

@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-python3 $(dirname "$0")/mkgenml.py $(dirname "$0")/ftocamldep.py $@
+python3 $(dirname "$0")/mkgenml.py $(dirname "$0")/ftocamldep.py "$@"

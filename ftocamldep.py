@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 08:07:29 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/01 08:48:24 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/01 09:23:59 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -47,7 +47,8 @@ def deps_from_rawdeps(rawdeps):
 	for line in rawdeps.splitlines():
 		sides = line.split(' :', 2)
 		# print('sides:', sides)
-		file_deps = (explode_filepath(sides[0]), sides[1].lstrip().split(' '))
+		file_deps = (explode_filepath(sides[0]),
+					 [x for x in sides[1].lstrip().split(' ') if x != ''])
 		print('filedep: %s' % str(file_deps))
 		files_deps.append(file_deps)
 	return files_deps
@@ -58,4 +59,5 @@ def from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir):
 	rawdeps = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)\
 	            .stdout.read().decode("utf-8");
 	deps = deps_from_rawdeps(rawdeps)
+	return deps
 	# print(rawdeps)

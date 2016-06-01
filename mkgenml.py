@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 07:48:00 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/01 09:05:15 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/01 09:29:25 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -40,7 +40,7 @@ def srcstargets_of_output(s):
 		if objsuffixes == None or len(objsuffixes) != 1:
 			print("\033[31mError: Could not find variable MKGEN_OBJSUFFIX_" + match[0] + "\033[0m")
 			exit()
-		suffixes = list(tuple(x.split(':')) for x in objsuffixes[0].lstrip().split(' '))
+		suffixes = dict(tuple(x.split(':')) for x in objsuffixes[0].lstrip().split(' '))
 		print(suffixes)
 		targets.append((match[0], match[1].split(' '), suffixes));
 	return targets
@@ -60,6 +60,28 @@ def sourcefiles_of_directory(dirname):
 		return []
 	print('    found:', files_found)
 	return files_found;
+
+def write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir):
+	for srcstarget in sorted(srcstargets, key=lambda f: f[0].upper()):
+		stream.write("MKGEN_SRCSBIN_%s :=" % srcstarget[0].upper())
+		for directory in sorted(srcstarget[1]):
+			files = sourcefiles_per_trgtdir[directory]
+			for f in sorted(files):
+				stream.write("\\\n")
+				suffix = srcstarget[2][f[2]]
+				stream.write("\t%s/%s/%s.%s" % (objdir, f[0], f[1], suffix))
+		stream.write("\n")
+
+def write_deps_to_file(stream, deps, objdir):
+	for filedep in sorted(deps):
+		stream.write("%s/%s/%s.%s :" % (objdir, filedep[0][0], filedep[0][1],
+										filedep[0][2]))
+		stream.write(" %s/%s.%s" % (filedep[0][0], filedep[0][1]
+			, {'cmo':'ml', 'cmx':'ml', 'cmi':'mli'}[filedep[0][2]]))
+		for dep in sorted(filedep[1]):
+			stream.write(" %s/%s" % (objdir, dep))
+		stream.write(" | %s/%s/\n" % (objdir, filedep[0][0]))
+		pass
 
 if __name__ == "__main__":
 	if not os.path.isfile("Makefile"):
@@ -88,5 +110,8 @@ if __name__ == "__main__":
 				sourcefiles_per_trgtdir[directory] = sourcefiles;
 
 	# print(sourcefiles_per_trgtdir)
-	from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir)
+	deps = from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir)
+	with open("depend.mk", "w") as stream:
+		write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir)
+		write_deps_to_file(stream, deps, objdir)
 				# dep = dep_of_filelist()

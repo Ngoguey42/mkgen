@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 08:07:29 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/01 09:23:59 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/01 11:38:12 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,8 +23,9 @@ _build/src/terminal/main.cmo : src/terminal/main.ml _build/src/shared/bar.cmo _b
 
 import os, subprocess, re
 
-def cmd_from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir):
-	cmd = 'ocamldep -one-line'
+def cmd_from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir, depcmd):
+	cmd = depcmd + ' -one-line'
+	# cmd = 'ocamldep -one-line'
 	for dirname, _ in sourcefiles_per_trgtdir.items():
 		cmd += " -I %s" % dirname
 	for _, filelist in sourcefiles_per_trgtdir.items():
@@ -53,8 +54,8 @@ def deps_from_rawdeps(rawdeps):
 		files_deps.append(file_deps)
 	return files_deps
 
-def from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir):
-	cmd = cmd_from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir)
+def from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir, depcmd):
+	cmd = cmd_from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir, depcmd)
 	print('cmd: \033[32m%s\033[0m' % cmd)
 	rawdeps = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)\
 	            .stdout.read().decode("utf-8");

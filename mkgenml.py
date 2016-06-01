@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 07:48:00 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/01 11:38:57 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/01 12:14:39 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,6 +20,9 @@ PATTERNSRCS = r"^MKGEN_SRCSDIRS_([^\s]*) .\= (.*)$"
 PATTERNOBJSUFFIX = r"^MKGEN_OBJSUFFIX_([^\s]*) .\= (.*)$"
 PATTERNDEPCMD = r"^MKGEN_DEPCMD .\= (.*)$"
 PATTERNSRC = r"^(.*)\.(ml|mli)$"
+
+src_to_bin_ext = {'cmo':'ml', 'cmx':'ml', 'cmi':'mli'}
+
 
 def objdir_of_output(s):
 	grps = re.search(PATTERNOBJDIR, s, re.MULTILINE)
@@ -76,17 +79,29 @@ def sourcefiles_of_directory(dirname):
 	print('    found:', files_found)
 	return files_found;
 
-def write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir):
+def write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir, depcmd):
 	for srcstarget in sorted(srcstargets, key=lambda f: f[0].upper()):
 		stream.write("MKGEN_SRCSBIN_%s :=" % srcstarget[0].upper())
 		unsorted = ""
 		for directory in sorted(srcstarget[1]):
 			files = sourcefiles_per_trgtdir[directory]
 			for f in sorted(files):
-				suffix = srcstarget[2][f[2]]
-				unsorted += " %s/%s/%s.%s" % (objdir, f[0], f[1], suffix)
-				# stream.write("\t%s/%s/%s.%s" % (objdir, f[0], f[1], suffix))
-			stream.write(unsorted)
+				# suffix = srcstarget[2][f[2]]
+				if f[2] == 'mli':
+					continue
+				unsorted += " %s/%s.ml" % (f[0], f[1])
+				# unsorted += " %s/%s/%s.%s" % (objdir, f[0], f[1], suffix)
+		cmd = depcmd + ' -one-line -sort' + unsorted
+		print('cmd: \033[32m%s\033[0m' % cmd)
+		sort = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)\
+					   .stdout.read().decode("utf-8");
+		suffix = srcstarget[2]['ml']
+		print('bf:', sort)
+		sort = ''.join([" %s/%s.%s" % (objdir, x[:-3], suffix) for x in sort.strip().split(' ') if x != ''])
+		print('af:', sort)
+		# stream.write("\t%s/%s/%s.%s" % (objdir, f[0], f[1], suffix))
+		# stream.write(sort)
+		stream.write(sort)
 		stream.write("\n")
 
 def write_deps_to_file(stream, deps, objdir):
@@ -94,7 +109,7 @@ def write_deps_to_file(stream, deps, objdir):
 		stream.write("%s/%s/%s.%s :" % (objdir, filedep[0][0], filedep[0][1],
 										filedep[0][2]))
 		stream.write(" %s/%s.%s" % (filedep[0][0], filedep[0][1]
-			, {'cmo':'ml', 'cmx':'ml', 'cmi':'mli'}[filedep[0][2]]))
+			, src_to_bin_ext[filedep[0][2]]))
 		for dep in sorted(filedep[1]):
 			stream.write(" %s/%s" % (objdir, dep))
 		stream.write(" | %s/%s/\n" % (objdir, filedep[0][0]))
@@ -140,6 +155,6 @@ if __name__ == "__main__":
 	# print(sourcefiles_per_trgtdir)
 	deps = from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir, depcmd)
 	with open("depend.mk", "w") as stream:
-		write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir)
+		write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir, depcmd)
 		write_deps_to_file(stream, deps, objdir)
 				# dep = dep_of_filelist()

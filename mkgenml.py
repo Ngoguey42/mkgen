@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 07:48:00 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/01 12:14:39 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/01 12:58:36 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -51,16 +51,7 @@ def srcstargets_of_output(s):
 			print("\033[31mError: Could not find variable MKGEN_OBJSUFFIX_" + match[0] + "\033[0m")
 			exit()
 		suffixes = eval(objsuffixes[0])
-		# suffixes = dict(tuple(x.split(':')) for x in objsuffixes[0].lstrip().split(' '))
-
-		# depcmd_pattern = r"^MKGEN_DEPCMD_" + match[0] + " .\= (.*)$"
-		# depcmd = re.findall(depcmd_pattern, s, re.MULTILINE)
-		# if depcmd == None or len(depcmd) != 1:
-		# 	print("\033[31mError: Could not find variable MKGEN_DEPCMD_" + match[0] + "\033[0m")
-		# 	exit()
-
 		targets.append((match[0], match[1].split(' '), suffixes));
-		# targets.append((match[0], match[1].split(' '), suffixes, depcmd[0]));
 	return targets
 
 def sourcefiles_of_directory(dirname):
@@ -86,21 +77,15 @@ def write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir, 
 		for directory in sorted(srcstarget[1]):
 			files = sourcefiles_per_trgtdir[directory]
 			for f in sorted(files):
-				# suffix = srcstarget[2][f[2]]
 				if f[2] == 'mli':
 					continue
 				unsorted += " %s/%s.ml" % (f[0], f[1])
-				# unsorted += " %s/%s/%s.%s" % (objdir, f[0], f[1], suffix)
 		cmd = depcmd + ' -one-line -sort' + unsorted
 		print('cmd: \033[32m%s\033[0m' % cmd)
 		sort = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)\
 					   .stdout.read().decode("utf-8");
 		suffix = srcstarget[2]['ml']
-		print('bf:', sort)
 		sort = ''.join([" %s/%s.%s" % (objdir, x[:-3], suffix) for x in sort.strip().split(' ') if x != ''])
-		print('af:', sort)
-		# stream.write("\t%s/%s/%s.%s" % (objdir, f[0], f[1], suffix))
-		# stream.write(sort)
 		stream.write(sort)
 		stream.write("\n")
 
@@ -134,11 +119,6 @@ if __name__ == "__main__":
 		depcmd = sys.argv[2]
 	else:
 		depcmd = 'ocamldep'
-	# depcmd_of_output(mkvars)
-	# if depcmd == None:
-	# 	print('\033[31mError: MKGEN_DEPCMD missing\033[0m')
-	# 	exit()
-	# print('depcmd: \033[32m%s\033[0m' % depcmd)
 
 	srcstargets = srcstargets_of_output(mkvars)
 	if srcstargets == None:
@@ -152,9 +132,7 @@ if __name__ == "__main__":
 				sourcefiles = sourcefiles_of_directory(directory)
 				sourcefiles_per_trgtdir[directory] = sourcefiles;
 
-	# print(sourcefiles_per_trgtdir)
 	deps = from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir, depcmd)
 	with open("depend.mk", "w") as stream:
 		write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir, depcmd)
 		write_deps_to_file(stream, deps, objdir)
-				# dep = dep_of_filelist()

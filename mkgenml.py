@@ -6,133 +6,153 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 07:48:00 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/01 12:58:36 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/02 09:55:32 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import os, subprocess, re, sys
-from ftocamldep import from_sourcefiles_per_trgtdir
-
-CMD0 = 'make -pn nosuchrule 2>/dev/null | grep -A1 "^# makefile"| grep -v "^#\|^--" | sort | uniq'
-
-PATTERNOBJDIR = r"^MKGEN_OBJDIR .\= ([^\s]*)$"
-PATTERNSRCS = r"^MKGEN_SRCSDIRS_([^\s]*) .\= (.*)$"
-PATTERNOBJSUFFIX = r"^MKGEN_OBJSUFFIX_([^\s]*) .\= (.*)$"
-PATTERNDEPCMD = r"^MKGEN_DEPCMD .\= (.*)$"
-PATTERNSRC = r"^(.*)\.(ml|mli)$"
+from ftocamldep import dependencies_of_data
 
 src_to_bin_ext = {'cmo':'ml', 'cmx':'ml', 'cmi':'mli'}
 
+"""
+data_of_makefilevars() INVARIANTS
 
-def objdir_of_output(s):
-	grps = re.search(PATTERNOBJDIR, s, re.MULTILINE)
-	if grps == None:
-		print("\033[31mError: Could not find variable MKGEN_OBJDIR\033[0m")
-		return None
-	return grps.group(1)
+objdir: must be present, must be string, must be longer than 0
+targets: must be present, must be dict, must be longer than 0
+targets.*:
+	must be dicts
+	must contain srcdirs
+	must contain objsuffixes
+	may contain depcmd (if missing, is set to 'ocamldep')
+targets.*.srcdirs: must be non-empty list of non-empty strings
+targets.*.objsuffixes: must be dict of non-empty strings
+targets.*.depcmd: must be non-empty string
 
-def depcmd_of_output(s):
-	grps = re.search(PATTERNDEPCMD, s, re.MULTILINE)
-	if grps == None:
-		print("\033[31mError: Could not find variable MKGEN_DEPCMD\033[0m")
-		return None
-	return grps.group(1)
+TODO: all keys must be non empty strings
 
-def srcstargets_of_output(s):
-	srcsdirs = re.findall(PATTERNSRCS, s, re.MULTILINE)
-	if srcsdirs == None or len(srcsdirs) == 0:
-		print("\033[31mError: Could not find any variable PATTERN MKGEN_SRCSDIRS_*\033[0m")
-		return None
-	targets = []
-	for match in srcsdirs:
-		objsuffix_pattern = r"^MKGEN_OBJSUFFIX_" + match[0] + " .\= (.*)$"
-		objsuffixes = re.findall(objsuffix_pattern, s, re.MULTILINE)
-		if objsuffixes == None or len(objsuffixes) != 1:
-			print("\033[31mError: Could not find variable MKGEN_OBJSUFFIX_" + match[0] + "\033[0m")
+"""
+
+def data_of_makefilevars(txt):
+	pattern = r"^\bMKGEN\b\s*\:\=(.*)$"
+	match = re.search(pattern, mkvars)
+	if match == None or match.group(1) == None:
+		print("\033[31mError: Could not find a valid MGKEN variable in Makefile\033[0m")
+		exit()
+	data = eval(match.group(1))
+	if data == None:
+		print("\033[31mError: Could not find a valid MGKEN variable in Makefile\033[0m")
+		exit()
+	if 'objdir' not in data:
+		print("\033[31mError: Missing MGKEN['objdir'] variable\033[0m")
+		exit()
+	if type(data['objdir']) is not str or len(data['objdir']) < 1:
+		print("\033[31mError: Invalid MGKEN['objdir'] variable\033[0m")
+		exit()
+	if 'targets' not in data:
+		print("\033[31mError: Missing MGKEN['targets'] variable\033[0m")
+		exit()
+	if type(data['targets']) is not dict:
+		print("\033[31mError: Invalid MGKEN['targets'] variable\033[0m")
+		exit()
+	if len(data['targets']) < 1:
+		print("\033[31mError: Empty MGKEN['targets'] variable\033[0m")
+		exit()
+	for trgname, trgdat in data['targets'].items():
+		if 'srcdirs' not in trgdat:
+			print("\033[31mError: Missing MGKEN['%s']['srcdirs'] variable\033[0m" % trgname)
 			exit()
-		suffixes = eval(objsuffixes[0])
-		targets.append((match[0], match[1].split(' '), suffixes));
-	return targets
+		if type(trgdat['srcdirs']) is not list:
+			print("\033[31mError: Invalid MGKEN['%s']['srcdirs'] variable\033[0m" % trgname)
+			exit()
+		if len(trgdat['srcdirs']) < 1:
+			print("\033[31mError: Empty MGKEN['%s']['srcdirs'] variable\033[0m" % trgname)
+			exit()
+		for path in trgdat['srcdirs']:
+			if type(path) is not str or len(path) < 1:
+				print("\033[31mError: Invalid path '%s'\033[0m" % path)
+				exit()
+		if 'objsuffixes' not in trgdat:
+			print("\033[31mError: Missing MGKEN['%s']['objsuffixes'] variable\033[0m" % trgname)
+			exit()
+		if type(trgdat['objsuffixes']) is not dict:
+			print("\033[31mError: Invalid MGKEN['%s']['objsuffixes'] variable\033[0m" % trgname)
+			exit()
+		if len(trgdat['objsuffixes']) < 1:
+			print("\033[31mError: Empty MGKEN['%s']['objsuffixes'] variable\033[0m" % trgname)
+			exit()
+		for k, suffix in trgdat['objsuffixes'].items():
+			if type(suffix) is not str or len(suffix) < 1:
+				print("\033[31mError: Invalid suffix '%s:%s'\033[0m" % (k, suffix))
+				exit()
+		if 'depcmd' in trgdat and (type(trgdat['depcmd']) != str or len(trgdat['depcmd']) < 1):
+			print("\033[31mError: Invalid MGKEN['%s']['depcmd'] variable\033[0m" % trgname)
+			exit()
+		elif 'depcmd' not in trgdat:
+			trgdat['depcmd'] = 'ocamldep'
 
-def sourcefiles_of_directory(dirname):
-	files_found = []
-	print('exploring:', directory) #debug
-	if not os.path.isdir(dirname):
-		print("\033[33mWarning: No such directory %s\033[0m" % dirname)
+	return data
+
+def sourcefiles_of_directory(path, srcsuffix_dict):
+	file_list = []
+	print('exploring:', path) #debug
+	if not os.path.isdir(path):
+		print("\033[33mWarning: No such directory %s\033[0m" % path)
 		return []
-	for file in os.listdir(dirname):
-		grps = re.search(PATTERNSRC, file)
-		if grps != None:
-			files_found.append((directory, grps.group(1), grps.group(2)))
-	if len(files_found) == 0:
-		print("\033[33mWarning: No sources found in %s\033[0m" % dirname)
-		return []
-	print('    found:', files_found)
-	return files_found;
+	for file in os.listdir(path):
+		dotpos = file.rfind('.')
+		if dotpos < 0:
+			continue
+		suffix = file[dotpos+1:]
+		if suffix in srcsuffix_dict:
+			file_list.append((path, file[:dotpos], suffix, srcsuffix_dict[suffix]))
+	return file_list
 
-def write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir, depcmd):
-	for srcstarget in sorted(srcstargets, key=lambda f: f[0].upper()):
-		stream.write("MKGEN_SRCSBIN_%s :=" % srcstarget[0].upper())
-		unsorted = ""
-		for directory in sorted(srcstarget[1]):
-			files = sourcefiles_per_trgtdir[directory]
-			for f in sorted(files):
-				if f[2] == 'mli':
-					continue
-				unsorted += " %s/%s.ml" % (f[0], f[1])
-		cmd = depcmd + ' -one-line -sort' + unsorted
-		print('cmd: \033[32m%s\033[0m' % cmd)
-		sort = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)\
-					   .stdout.read().decode("utf-8");
-		suffix = srcstarget[2]['ml']
-		sort = ''.join([" %s/%s.%s" % (objdir, x[:-3], suffix) for x in sort.strip().split(' ') if x != ''])
-		stream.write(sort)
-		stream.write("\n")
 
-def write_deps_to_file(stream, deps, objdir):
-	for filedep in sorted(deps):
-		stream.write("%s/%s/%s.%s :" % (objdir, filedep[0][0], filedep[0][1],
+def write_to_trgstream(trgname, trgdat, trgstream, objdir):
+	trgstream.write("MKGEN_SRCSBIN_%s :=" % trgname.upper())
+	for prefix, body, _, suffix in trgdat['src_list_sorted']:
+		if suffix == 'cmi':
+			continue
+		trgstream.write(" %s/%s/%s.%s" % (objdir, prefix, body, suffix))
+	trgstream.write("\n\n")
+
+	for filedep in sorted(trgdat['dep_list']):
+		trgstream.write("%s/%s/%s.%s :" % (objdir, filedep[0][0], filedep[0][1],
 										filedep[0][2]))
-		stream.write(" %s/%s.%s" % (filedep[0][0], filedep[0][1]
+		trgstream.write(" %s/%s.%s" % (filedep[0][0], filedep[0][1]
 			, src_to_bin_ext[filedep[0][2]]))
 		for dep in sorted(filedep[1]):
-			stream.write(" %s/%s" % (objdir, dep))
-		stream.write(" | %s/%s/\n" % (objdir, filedep[0][0]))
-		pass
+			trgstream.write(" %s/%s" % (objdir, dep))
+		trgstream.write(" | %s/%s/\n" % (objdir, filedep[0][0]))
+
 
 if __name__ == "__main__":
 	if not os.path.isfile("Makefile"):
 		print(("\033[31mError: %s/Makefile missing\033[0m") %(os.getcwd()))
 		exit()
-	print('cmd: \033[32m%s\033[0m' % CMD0)
-	mkvars = subprocess.Popen(CMD0, shell=True, stdout=subprocess.PIPE)\
+	cmd = 'make -pn nosuchrule 2>/dev/null | grep "MKGEN :="'
+	print('cmd: \033[32m%s\033[0m' % cmd)
+
+	mkvars = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)\
 					   .stdout.read().decode("utf-8");
-	# print('mkvars:', mkvars)
-	objdir = objdir_of_output(mkvars)
-	if objdir == None:
-		print('\033[31mError: MKGEN_OBJDIR missing\033[0m')
-		exit()
-	print('objdir: \033[32m%s\033[0m' % objdir)
 
-	print(sys.argv)
-	if len(sys.argv) > 2:
-		depcmd = sys.argv[2]
-	else:
-		depcmd = 'ocamldep'
+	data = data_of_makefilevars(mkvars)
 
-	srcstargets = srcstargets_of_output(mkvars)
-	if srcstargets == None:
-		exit()
-	print('srcstargets: \033[32m%s\033[0m' % srcstargets)
+	# with open("depend.mk", "w") as mainstream:
+	if True:
+		for trgname, trgdat in data['targets'].items():
+			src_list = []
+			for path in trgdat['srcdirs']:
+				src_list += sourcefiles_of_directory(path, trgdat['objsuffixes'])
+				trgdat['src_list_unsorted'] = src_list
 
-	sourcefiles_per_trgtdir = dict()
-	for trgt in srcstargets:
-		for directory in trgt[1]:
-			if directory not in sourcefiles_per_trgtdir:
-				sourcefiles = sourcefiles_of_directory(directory)
-				sourcefiles_per_trgtdir[directory] = sourcefiles;
+			(src_list_sorted, dep_list) = dependencies_of_data(trgdat)
+			del trgdat['src_list_unsorted']
+			trgdat['src_list_sorted'] = src_list_sorted
+			trgdat['dep_list'] = dep_list
 
-	deps = from_sourcefiles_per_trgtdir(sourcefiles_per_trgtdir, depcmd)
-	with open("depend.mk", "w") as stream:
-		write_targets_to_file(stream, srcstargets, sourcefiles_per_trgtdir, objdir, depcmd)
-		write_deps_to_file(stream, deps, objdir)
+			with open("depend_" + trgname.lower() + ".mk", "w") as trgstream:
+				write_to_trgstream(trgname, trgdat, trgstream, data['objdir'])
+
+	print(data)

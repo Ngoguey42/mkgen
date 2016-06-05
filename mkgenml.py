@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 07:48:00 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/02 09:55:32 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/05 12:54:36 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -139,6 +139,12 @@ if __name__ == "__main__":
 
 	data = data_of_makefilevars(mkvars)
 
+	if not os.path.exists("deps"):
+		os.mkdir("deps")
+	elif not os.path.isdir("deps"):
+		print("\033[31mError: ./deps is not a directory\033[0m")
+		exit()
+
 	# with open("depend.mk", "w") as mainstream:
 	if True:
 		for trgname, trgdat in data['targets'].items():
@@ -152,7 +158,7 @@ if __name__ == "__main__":
 			trgdat['src_list_sorted'] = src_list_sorted
 			trgdat['dep_list'] = dep_list
 
-			with open("depend_" + trgname.lower() + ".mk", "w") as trgstream:
+			with open("deps/depend_" + trgname.lower() + ".mk", "w") as trgstream:
 				write_to_trgstream(trgname, trgdat, trgstream, data['objdir'])
 
 	print(data)

@@ -6,7 +6,7 @@
 #    By: ngoguey <ngoguey@student.42.fr>            +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2016/06/01 07:48:00 by ngoguey           #+#    #+#              #
-#    Updated: 2016/06/05 12:54:36 by ngoguey          ###   ########.fr        #
+#    Updated: 2016/06/15 14:23:55 by ngoguey          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -161,4 +161,4 @@ if __name__ == "__main__":
 			with open("deps/depend_" + trgname.lower() + ".mk", "w") as trgstream:
 				write_to_trgstream(trgname, trgdat, trgstream, data['objdir'])
 
-	print(data)
+	# print(data)
